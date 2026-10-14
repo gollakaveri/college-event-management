@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Events</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>📅 All College Events</h1>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="list.html">All Events</a>
+        <a href="listOne.html">Search Event</a>
+        <a href="insert.html">Add Event</a>
+        <a href="update.html">Update Event</a>
+        <a href="delete.html">Delete Event</a>
+    </nav>
+</header>
+
+<main>
+    <div class="card">
+        <img loading="lazy" class="event-image"
+             src="assets/events.svg"
+             alt="College gathering">
+
+        <h2>Registered Events</h2>
+        <label>Search by event name, type or venue</label>
+        <input type="text" id="filter" placeholder="Type to filter events">
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Event Name</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Venue</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="eventRows"></tbody>
+            </table>
+        </div>
+
+        <p id="message" class="message"></p>
+        <button onclick="loadEvents()">Refresh Events</button>
+    </div>
+</main>
+
+<script>
+let allEvents = [];
+
+function safe(value) {
+    const div = document.createElement("div");
+    div.textContent = value ?? "";
+    return div.innerHTML;
+}
+
+function renderEvents(events) {
+    const tbody = document.getElementById("eventRows");
+
+    if (events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No events found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = events.map(event => `
+        <tr>
+            <td>${safe(event.event_id)}</td>
+            <td>${safe(event.event_name)}</td>
+            <td>${safe(event.event_type)}</td>
+            <td>${safe(event.event_date ? String(event.event_date).slice(0, 10) : "")}</td>
+            <td>${safe(event.venue)}</td>
+            <td>${safe(event.description)}</td>
+        </tr>
+    `).join("");
+}
+
+async function loadEvents() {
+    try {
+        const response = await fetch("/events");
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "Unable to load events");
+
+        allEvents = data;
+        renderEvents(allEvents);
+        document.getElementById("message").textContent =
+            "Total events: " + allEvents.length;
+    } catch (error) {
+        document.getElementById("message").textContent = error.message;
+    }
+}
+
+document.getElementById("filter").addEventListener("input", function() {
+    const query = this.value.toLowerCase();
+
+    const filtered = allEvents.filter(event =>
+        [event.event_name, event.event_type, event.venue]
+            .some(value => String(value ?? "").toLowerCase().includes(query))
+    );
+
+    renderEvents(filtered);
+});
+
+loadEvents();
+</script>
+
+<footer>College Event Management System</footer>
+    <script src="app.js" defer></script>
+</body>
+</html>

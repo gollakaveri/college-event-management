@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Event</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>🔎 Search an Event</h1>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="list.html">All Events</a>
+        <a href="listOne.html">Search Event</a>
+        <a href="insert.html">Add Event</a>
+        <a href="update.html">Update Event</a>
+        <a href="delete.html">Delete Event</a>
+    </nav>
+</header>
+
+<main>
+    <div class="card">
+        <img loading="lazy" class="event-image"
+             src="assets/search.svg"
+             alt="Event stage">
+
+        <h2>Find Event Details</h2>
+
+        <label>Select Event</label>
+        <select id="eventSelect">
+            <option value="">Loading events...</option>
+        </select>
+
+        <label>Event ID</label>
+        <input type="number" id="eventId" min="1"
+               placeholder="Select an event or enter ID">
+
+        <button id="searchBtn">Search Event</button>
+
+        <div id="result" class="card" hidden></div>
+        <p id="message" class="message"></p>
+    </div>
+</main>
+
+<script>
+const select = document.getElementById("eventSelect");
+const idInput = document.getElementById("eventId");
+const message = document.getElementById("message");
+const result = document.getElementById("result");
+
+async function loadEvents() {
+    try {
+        const response = await fetch("/events");
+        const events = await response.json();
+
+        if (!response.ok) throw new Error(events.error || "Unable to load events");
+
+        select.innerHTML = '<option value="">-- Select an event --</option>';
+
+        events.forEach(event => {
+            const option = document.createElement("option");
+            option.value = event.event_id;
+            option.textContent = `${event.event_name} (ID: ${event.event_id})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        select.innerHTML = '<option value="">Could not load events</option>';
+        message.textContent = error.message;
+    }
+}
+
+select.addEventListener("change", () => {
+    idInput.value = select.value;
+    result.hidden = true;
+    message.textContent = "";
+});
+
+document.getElementById("searchBtn").addEventListener("click", async () => {
+    const id = idInput.value.trim();
+
+    if (!id || Number(id) < 1) {
+        message.textContent = "Please select an event or enter a valid ID.";
+        return;
+    }
+
+    try {
+        const response = await fetch("/events/" + encodeURIComponent(id));
+        const event = await response.json();
+
+        if (!response.ok) throw new Error(event.error || "Event not found");
+
+        result.hidden = false;
+        result.innerHTML = "";
+
+        const title = document.createElement("h3");
+        title.textContent = event.event_name || "";
+        result.appendChild(title);
+
+        [
+            ["Event ID", event.event_id],
+            ["Event Type", event.event_type],
+            ["Event Date", event.event_date ? String(event.event_date).slice(0, 10) : ""],
+            ["Venue", event.venue],
+            ["Description", event.description]
+        ].forEach(([label, value]) => {
+            const p = document.createElement("p");
+            const strong = document.createElement("strong");
+            strong.textContent = label + ": ";
+            p.appendChild(strong);
+            p.appendChild(document.createTextNode(value ?? ""));
+            result.appendChild(p);
+        });
+
+        message.textContent = "Event found successfully.";
+    } catch (error) {
+        result.hidden = true;
+        message.textContent = error.message;
+    }
+});
+
+loadEvents();
+</script>
+
+<footer>College Event Management System</footer>
+    <script src="app.js" defer></script>
+</body>
+</html>

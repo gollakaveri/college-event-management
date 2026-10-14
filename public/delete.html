@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Event</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>🗑️ Delete an Event</h1>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="list.html">All Events</a>
+        <a href="listOne.html">Search Event</a>
+        <a href="insert.html">Add Event</a>
+        <a href="update.html">Update Event</a>
+        <a href="delete.html">Delete Event</a>
+    </nav>
+</header>
+
+<main>
+    <div class="card">
+        <img loading="lazy" class="event-image"
+             src="assets/delete.svg"
+             alt="College event">
+
+        <h2>Select Event to Delete</h2>
+
+        <label>Select Event</label>
+        <select id="eventSelect">
+            <option value="">Loading events...</option>
+        </select>
+
+        <div id="preview" class="card" hidden></div>
+
+        <button id="deleteBtn" class="danger" disabled>
+            Delete Selected Event
+        </button>
+
+        <p id="message" class="message"></p>
+    </div>
+</main>
+
+<script>
+const select = document.getElementById("eventSelect");
+const preview = document.getElementById("preview");
+const deleteBtn = document.getElementById("deleteBtn");
+const message = document.getElementById("message");
+
+async function loadEvents() {
+    try {
+        const response = await fetch("/events");
+        const events = await response.json();
+
+        if (!response.ok) throw new Error(events.error || "Unable to load events");
+
+        select.innerHTML = '<option value="">-- Select event --</option>';
+
+        events.forEach(event => {
+            const option = document.createElement("option");
+            option.value = event.event_id;
+            option.textContent = `${event.event_name} (ID: ${event.event_id})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        message.textContent = error.message;
+    }
+}
+
+select.addEventListener("change", async function() {
+    preview.hidden = true;
+    deleteBtn.disabled = true;
+    message.textContent = "";
+
+    if (!this.value) return;
+
+    try {
+        const response = await fetch("/events/" + encodeURIComponent(this.value));
+        const event = await response.json();
+
+        if (!response.ok) throw new Error(event.error || "Event not found");
+
+        preview.hidden = false;
+        preview.innerHTML = "";
+
+        const title = document.createElement("h3");
+        title.textContent = event.event_name || "";
+        preview.appendChild(title);
+
+        [
+            ["Event ID", event.event_id],
+            ["Type", event.event_type],
+            ["Date", event.event_date ? String(event.event_date).slice(0, 10) : ""],
+            ["Venue", event.venue],
+            ["Description", event.description]
+        ].forEach(([label, value]) => {
+            const p = document.createElement("p");
+            const strong = document.createElement("strong");
+            strong.textContent = label + ": ";
+            p.appendChild(strong);
+            p.appendChild(document.createTextNode(value ?? ""));
+            preview.appendChild(p);
+        });
+
+        deleteBtn.disabled = false;
+    } catch (error) {
+        message.textContent = error.message;
+    }
+});
+
+deleteBtn.addEventListener("click", async () => {
+    const id = select.value;
+
+    if (!id) return;
+
+    if (!confirm("Are you sure you want to delete this event?")) return;
+
+    try {
+        const response = await fetch("/events/" + encodeURIComponent(id), {
+            method: "DELETE"
+        });
+
+        const answer = await response.json();
+
+        if (!response.ok) throw new Error(answer.error || "Delete failed");
+
+        message.textContent = answer.message;
+        preview.hidden = true;
+        deleteBtn.disabled = true;
+        await loadEvents();
+    } catch (error) {
+        message.textContent = error.message;
+    }
+});
+
+loadEvents();
+</script>
+
+<footer>College Event Management System</footer>
+    <script src="app.js" defer></script>
+</body>
+</html>

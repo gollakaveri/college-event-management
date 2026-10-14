@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Event</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>✏️ Update Event Details</h1>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="list.html">All Events</a>
+        <a href="listOne.html">Search Event</a>
+        <a href="insert.html">Add Event</a>
+        <a href="update.html">Update Event</a>
+        <a href="delete.html">Delete Event</a>
+    </nav>
+</header>
+
+<main>
+    <div class="card">
+        <img loading="lazy" class="event-image"
+             src="assets/update.svg"
+             alt="Event planning">
+
+        <h2>Select Event to Update</h2>
+
+        <label>Select Event</label>
+        <select id="eventSelect">
+            <option value="">Loading events...</option>
+        </select>
+
+        <form id="updateForm">
+            <label>Event ID</label>
+            <input type="number" id="event_id" readonly>
+
+            <label>Event Name</label>
+            <input type="text" id="event_name" required>
+
+            <label>Event Type</label>
+            <select id="event_type" required>
+                <option value="">Select type</option>
+                <option value="Technical">Technical</option>
+                <option value="Cultural">Cultural</option>
+                <option value="Sports">Sports</option>
+                <option value="Workshop">Workshop</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <label>Event Date</label>
+            <input type="date" id="event_date" required>
+
+            <label>Venue</label>
+            <input type="text" id="venue" required>
+
+            <label>Description</label>
+            <textarea id="description"></textarea>
+
+            <button type="submit">Update Event</button>
+        </form>
+
+        <p id="message" class="message"></p>
+    </div>
+</main>
+
+<script>
+const select = document.getElementById("eventSelect");
+const message = document.getElementById("message");
+
+async function loadEvents() {
+    try {
+        const response = await fetch("/events");
+        const events = await response.json();
+
+        if (!response.ok) throw new Error(events.error || "Unable to load events");
+
+        select.innerHTML = '<option value="">-- Select event --</option>';
+
+        events.forEach(event => {
+            const option = document.createElement("option");
+            option.value = event.event_id;
+            option.textContent = `${event.event_name} (ID: ${event.event_id})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        message.textContent = error.message;
+    }
+}
+
+select.addEventListener("change", async function() {
+    const id = this.value;
+    message.textContent = "";
+
+    if (!id) {
+        document.getElementById("updateForm").reset();
+        document.getElementById("event_id").value = "";
+        return;
+    }
+
+    try {
+        const response = await fetch("/events/" + encodeURIComponent(id));
+        const event = await response.json();
+
+        if (!response.ok) throw new Error(event.error || "Unable to load event");
+
+        document.getElementById("event_id").value = event.event_id;
+        document.getElementById("event_name").value = event.event_name || "";
+        document.getElementById("event_type").value = event.event_type || "";
+        document.getElementById("event_date").value =
+            event.event_date ? String(event.event_date).slice(0, 10) : "";
+        document.getElementById("venue").value = event.venue || "";
+        document.getElementById("description").value = event.description || "";
+    } catch (error) {
+        message.textContent = error.message;
+    }
+});
+
+document.getElementById("updateForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById("event_id").value;
+
+    if (!id) {
+        message.textContent = "Please select an event first.";
+        return;
+    }
+
+    const data = {
+        event_name: document.getElementById("event_name").value,
+        event_type: document.getElementById("event_type").value,
+        event_date: document.getElementById("event_date").value,
+        venue: document.getElementById("venue").value,
+        description: document.getElementById("description").value
+    };
+
+    try {
+        const response = await fetch("/events/" + encodeURIComponent(id), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        const answer = await response.json();
+
+        if (!response.ok) throw new Error(answer.error || "Update failed");
+
+        message.textContent = answer.message;
+        await loadEvents();
+        select.value = id;
+    } catch (error) {
+        message.textContent = error.message;
+    }
+});
+
+loadEvents();
+</script>
+
+<footer>College Event Management System</footer>
+    <script src="app.js" defer></script>
+</body>
+</html>
